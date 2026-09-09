@@ -901,8 +901,9 @@
 
     function renderCover() {
       setBack(undefined);
-      if (state.revealed.length) {
-        state.revealed = [];
+      const keepFirst = state.revealed.includes(0) ? [0] : [];
+      if (state.revealed.length !== keepFirst.length) {
+        state.revealed = keepFirst;
         saveProgress();
       }
       screenEl.innerHTML = `
