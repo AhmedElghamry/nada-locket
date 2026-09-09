@@ -39,6 +39,8 @@
     body {
       margin: 0;
       padding: 0;
+      height: 100%;
+      overflow: hidden;
     }
 
     body {
@@ -135,6 +137,26 @@
       transform: scale(1.3);
     }
 
+    .progress .dot.done {
+      cursor: pointer;
+    }
+
+    .progress .dot.done:hover {
+      transform: scale(1.25);
+    }
+
+    .nav-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .nav-row .btn {
+      margin: 0;
+    }
+
     .locket {
       position: relative;
       width: 100%;
@@ -146,6 +168,12 @@
       padding: 34px 28px 30px;
       max-height: calc(100vh - 120px);
       overflow-y: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .locket::-webkit-scrollbar {
+      display: none;
     }
 
     .locket::before,
@@ -664,6 +692,12 @@
       width: 100%;
       max-height: 85vh;
       overflow-y: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .modal-card::-webkit-scrollbar {
+      display: none;
     }
 
     [hidden] {
@@ -778,13 +812,15 @@
     const lockedTypeAnnounce = new Set();
 
     function loadProgress() {
+      const fallback = { index: -1, unlocked: [], revealed: [] };
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return { index: -1, unlocked: [] };
+        if (!raw) return fallback;
         const p = JSON.parse(raw);
-        if (typeof p.index !== 'number' || !Array.isArray(p.unlocked)) return { index: -1, unlocked: [] };
+        if (typeof p.index !== 'number' || !Array.isArray(p.unlocked)) return fallback;
+        if (!Array.isArray(p.revealed)) p.revealed = [];
         return p;
-      } catch (e) { return { index: -1, unlocked: [] }; }
+      } catch (e) { return fallback; }
     }
     function saveProgress() {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { }
@@ -802,8 +838,13 @@
       progressEl.innerHTML = '';
       if (state.index < 0) { return; }
       STOPS.forEach((_, i) => {
+        const unlocked = state.unlocked.includes(i);
         const d = document.createElement('div');
-        d.className = 'dot' + (state.unlocked.includes(i) ? ' done' : '') + (i === state.index ? ' current' : '');
+        d.className = 'dot' + (unlocked ? ' done' : '') + (i === state.index ? ' current' : '');
+        if (unlocked) {
+          d.title = STOPS[i].memoryTitle;
+          d.addEventListener('click', () => go(i));
+        }
         progressEl.appendChild(d);
       });
     }
@@ -868,7 +909,12 @@
     <div class="eyebrow">${stop.chapter}</div>
     <h2 class="headline">${stop.riddle}</h2>
     ${bodyHtml}
+    ${i > 0 ? `<div class="nav-row"><button class="btn ghost small" id="prevBtn">‹ Previous memory</button></div>` : ''}
   `;
+
+      if (i > 0) {
+        document.getElementById('prevBtn').addEventListener('click', () => go(i - 1));
+      }
 
       const hintLine = document.getElementById('hintLine');
       let attempts = 0;
@@ -937,6 +983,7 @@
 
     function renderSolved(stop, i) {
       const isLast = i === STOPS.length - 1;
+      const alreadyRevealed = state.revealed.includes(i);
       screenEl.innerHTML = `
     <div class="eyebrow">${stop.chapter} · Unlocked</div>
     <div class="reveal-wrap">
@@ -945,14 +992,24 @@
           ? `<img src="${stop.image}" alt="${stop.memoryTitle}" />`
           : `<div class="photo-placeholder"><div class="mono">✦</div><small>Photo goes here</small></div>`
         }
-        <canvas class="scratch-canvas" id="scratchCanvas"></canvas>
+        ${alreadyRevealed ? '' : `<canvas class="scratch-canvas" id="scratchCanvas"></canvas>`}
       </div>
-      <button class="reveal-skip" id="revealSkip">having trouble scratching? tap to reveal</button>
+      ${alreadyRevealed ? '' : `<button class="reveal-skip" id="revealSkip">having trouble scratching? tap to reveal</button>`}
     </div>
-    <div class="memory-title" id="memTitle" hidden>${stop.memoryTitle}</div>
-    <p class="memory-text" id="memText" hidden>${stop.memoryText}</p>
-    <button class="btn continue-btn" id="continueBtn" hidden>${isLast ? 'Read the last page' : 'Continue'}</button>
+    <div class="memory-title" id="memTitle"${alreadyRevealed ? '' : ' hidden'}>${stop.memoryTitle}</div>
+    <p class="memory-text" id="memText"${alreadyRevealed ? '' : ' hidden'}>${stop.memoryText}</p>
+    <div class="nav-row" id="navRow"${alreadyRevealed ? '' : ' hidden'}>
+      ${i > 0 ? `<button class="btn ghost" id="prevBtn">‹ Previous</button>` : ''}
+      <button class="btn continue-btn" id="continueBtn">${isLast ? 'Read the last page' : 'Continue'}</button>
+    </div>
   `;
+
+      if (i > 0) {
+        document.getElementById('prevBtn').addEventListener('click', () => go(i - 1));
+      }
+      document.getElementById('continueBtn').addEventListener('click', () => go(i + 1));
+
+      if (alreadyRevealed) return;
 
       const frame = document.getElementById('photoFrame');
       const canvas = document.getElementById('scratchCanvas');
@@ -967,9 +1024,10 @@
         setTimeout(() => canvas.remove(), 500);
         document.getElementById('memTitle').hidden = false;
         document.getElementById('memText').hidden = false;
-        document.getElementById('continueBtn').hidden = false;
+        document.getElementById('navRow').hidden = false;
+        if (!state.revealed.includes(i)) state.revealed.push(i);
+        saveProgress();
       }
-      document.getElementById('continueBtn').addEventListener('click', () => go(i + 1));
       document.getElementById('revealSkip').addEventListener('click', showMemory);
 
       function setupCanvas() {
@@ -1049,7 +1107,10 @@
     <div class="divider"></div>
     <p class="sub" style="font-size:17px; font-style:italic; color:var(--ivory);">${FINALE.message}</p>
     <div class="gallery" id="gallery"></div>
-    <button class="btn ghost small" id="replayBtn" style="margin-top:22px;">Walk through it again</button>
+    <div class="nav-row" style="margin-top:22px;">
+      <button class="btn ghost small" id="prevBtn">‹ Previous</button>
+      <button class="btn ghost small" id="replayBtn">Walk through it again</button>
+    </div>
   `;
       const gallery = document.getElementById('gallery');
       STOPS.forEach((s, idx) => {
@@ -1058,6 +1119,7 @@
         b.addEventListener('click', () => openMemoryModal(s));
         gallery.appendChild(b);
       });
+      document.getElementById('prevBtn').addEventListener('click', () => go(STOPS.length - 1));
       document.getElementById('replayBtn').addEventListener('click', () => go(0));
       launchPetals();
     }
