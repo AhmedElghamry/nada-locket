@@ -909,12 +909,10 @@
     <div class="eyebrow">${stop.chapter}</div>
     <h2 class="headline">${stop.riddle}</h2>
     ${bodyHtml}
-    ${i > 0 ? `<div class="nav-row"><button class="btn ghost small" id="prevBtn">‹ Previous memory</button></div>` : ''}
+    <div class="nav-row"><button class="btn ghost small" id="prevBtn">${i > 0 ? '‹ Previous memory' : '‹ Back to the start'}</button></div>
   `;
 
-      if (i > 0) {
-        document.getElementById('prevBtn').addEventListener('click', () => go(i - 1));
-      }
+      document.getElementById('prevBtn').addEventListener('click', () => go(i - 1));
 
       const hintLine = document.getElementById('hintLine');
       let attempts = 0;
@@ -999,14 +997,12 @@
     <div class="memory-title" id="memTitle"${alreadyRevealed ? '' : ' hidden'}>${stop.memoryTitle}</div>
     <p class="memory-text" id="memText"${alreadyRevealed ? '' : ' hidden'}>${stop.memoryText}</p>
     <div class="nav-row" id="navRow"${alreadyRevealed ? '' : ' hidden'}>
-      ${i > 0 ? `<button class="btn ghost" id="prevBtn">‹ Previous</button>` : ''}
+      <button class="btn ghost" id="prevBtn">${i > 0 ? '‹ Previous' : '‹ Back to the start'}</button>
       <button class="btn continue-btn" id="continueBtn">${isLast ? 'Read the last page' : 'Continue'}</button>
     </div>
   `;
 
-      if (i > 0) {
-        document.getElementById('prevBtn').addEventListener('click', () => go(i - 1));
-      }
+      document.getElementById('prevBtn').addEventListener('click', () => go(i - 1));
       document.getElementById('continueBtn').addEventListener('click', () => go(i + 1));
 
       if (alreadyRevealed) return;
