@@ -509,6 +509,10 @@
       background: var(--void-2);
     }
 
+    .photo-frame video {
+      touch-action: pan-y;
+    }
+
     .photo-placeholder {
       display: flex;
       align-items: center;
@@ -705,67 +709,8 @@
       }
     }
 
-    .gallery {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+    .finale-photo {
       margin-top: 20px;
-    }
-
-    .gallery button {
-      padding: 0;
-      border: 1px solid var(--gold-dim);
-      border-radius: 8px;
-      overflow: hidden;
-      background: var(--void-2);
-      cursor: pointer;
-      aspect-ratio: 1;
-    }
-
-    .gallery img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .gallery .ph {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: var(--font-script);
-      color: var(--gold-dim);
-      font-size: 20px;
-    }
-
-    .modal-back {
-      position: fixed;
-      inset: 0;
-      background: rgba(10, 5, 7, 0.78);
-      z-index: 20;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .modal-card {
-      background: var(--wine);
-      border: 1px solid var(--gold-dim);
-      border-radius: 18px;
-      padding: 22px;
-      max-width: 420px;
-      width: 100%;
-      max-height: 85vh;
-      overflow-y: auto;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-
-    .modal-card::-webkit-scrollbar {
-      display: none;
     }
 
     [hidden] {
@@ -797,10 +742,6 @@
         <div id="screen"></div>
       </div>
     </div>
-  </div>
-
-  <div class="modal-back" id="modalBack" hidden>
-    <div class="modal-card" id="modalCard"></div>
   </div>
 
   <script>
@@ -883,7 +824,8 @@
 
     const FINALE = {
       title: "Happy 23rd, my love",
-      message: "Replace this with your birthday letter to Nada — everything you want her to know today.",
+      message: "I wish you the best of everything this year — that you achieve even more, and that we grow closer to being together for the rest of our lives. I hope we finish our home and get married soon, so we can start writing new chapters of our own, darling.",
+      image: null
     };
 
     /* ========================================================================= */
@@ -1230,37 +1172,18 @@
     <h1 class="headline" style="font-size:clamp(24px,7vw,32px);">${FINALE.title}</h1>
     <div class="divider"></div>
     <p class="sub" style="font-size:17px; font-style:italic; color:var(--ivory);">${FINALE.message}</p>
-    <div class="gallery" id="gallery"></div>
+    <div class="finale-photo">
+      <div class="photo-frame">
+        ${FINALE.image
+          ? `<img src="${FINALE.image}" alt="${FINALE.title}" />`
+          : `<div class="photo-placeholder"><div class="mono">✦</div><small>Photo goes here</small></div>`
+        }
+      </div>
+    </div>
     <button class="btn ghost small" id="replayBtn" style="margin-top:22px;">Walk through it again</button>
   `;
-      const gallery = document.getElementById('gallery');
-      STOPS.forEach((s, idx) => {
-        const b = document.createElement('button');
-        b.innerHTML = s.video ? `<div class="ph">🎬</div>` : (s.image ? `<img src="${s.image}" alt="${s.memoryTitle}" />` : `<div class="ph">✦</div>`);
-        b.addEventListener('click', () => openMemoryModal(s));
-        gallery.appendChild(b);
-      });
       document.getElementById('replayBtn').addEventListener('click', () => go(0));
       launchPetals();
-    }
-
-    function openMemoryModal(stop) {
-      const back = document.getElementById('modalBack');
-      const card = document.getElementById('modalCard');
-      card.innerHTML = `
-    <div class="photo-frame"${stop.video ? ' style="aspect-ratio:16/9;"' : ''}>
-      ${stop.video
-          ? `<video src="${stop.video}" controls playsinline></video>`
-          : (stop.image ? `<img src="${stop.image}" alt="${stop.memoryTitle}" />` : `<div class="photo-placeholder"><div class="mono">✦</div><small>Photo goes here</small></div>`)
-        }
-    </div>
-    <div class="memory-title" style="opacity:1;transform:none;">${stop.memoryTitle}</div>
-    <p class="memory-text" style="opacity:1;transform:none;">${stop.memoryText}</p>
-    <button class="btn small" id="closeModal" style="margin-top:16px;">Close</button>
-  `;
-      back.hidden = false;
-      document.getElementById('closeModal').addEventListener('click', () => back.hidden = true);
-      back.addEventListener('click', e => { if (e.target === back) back.hidden = true; });
     }
 
     function launchPetals() {
