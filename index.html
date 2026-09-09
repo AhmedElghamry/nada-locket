@@ -536,29 +536,6 @@
       text-transform: uppercase;
     }
 
-    .scratch-canvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      touch-action: none;
-      cursor: grab;
-    }
-
-    .scratch-hint {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 10px;
-      text-align: center;
-      pointer-events: none;
-      font-family: var(--font-ui);
-      font-size: 10px;
-      letter-spacing: .18em;
-      text-transform: uppercase;
-      color: rgba(28, 15, 20, 0.55);
-    }
-
     .scratch-hint-label {
       text-align: center;
       margin-top: 10px;
@@ -604,19 +581,6 @@
     .wax-seal.melt {
       transform: translate(-50%, -50%) scale(1.3);
       opacity: 0;
-    }
-
-    .reveal-skip {
-      display: block;
-      margin: 10px auto 0;
-      background: none;
-      border: none;
-      color: var(--ivory-dim);
-      font-family: var(--font-ui);
-      font-size: 10px;
-      letter-spacing: .1em;
-      text-decoration: underline;
-      cursor: pointer;
     }
 
     .memory-text {
@@ -1035,13 +999,9 @@
     <div class="reveal-wrap">
       <div class="photo-frame"${isVideo ? ' style="aspect-ratio:16/9;"' : ''} id="photoFrame">
         ${mediaHtml}
-        ${alreadyRevealed ? '' : (isVideo
-          ? `<button class="wax-seal" id="waxSeal" aria-label="Break the seal to play the video"><span class="wax-seal-icon">❤</span></button>`
-          : `<canvas class="scratch-canvas" id="scratchCanvas"></canvas>`)}
+        ${alreadyRevealed ? '' : `<button class="wax-seal" id="waxSeal" aria-label="Break the seal to reveal"><span class="wax-seal-icon">❤</span></button>`}
       </div>
-      ${alreadyRevealed ? '' : (isVideo
-          ? `<div class="scratch-hint-label">break the seal to watch</div>`
-          : `<button class="reveal-skip" id="revealSkip">having trouble scratching? tap to reveal</button>`)}
+      ${alreadyRevealed ? '' : `<div class="scratch-hint-label">break the seal to ${isVideo ? 'watch' : 'see'}</div>`}
     </div>
     <div class="memory-title" id="memTitle"${alreadyRevealed ? '' : ' hidden'}>${stop.memoryTitle}</div>
     <p class="memory-text" id="memText"${alreadyRevealed ? '' : ' hidden'}>${stop.memoryText}</p>
@@ -1064,105 +1024,20 @@
         saveProgress();
       }
 
-      if (isVideo) {
-        let opened = false;
-        const seal = document.getElementById('waxSeal');
-        const videoEl = document.getElementById('chapterMedia');
-        seal.addEventListener('click', () => {
-          if (opened) return;
-          opened = true;
-          seal.classList.add('melt');
+      let opened = false;
+      const seal = document.getElementById('waxSeal');
+      seal.addEventListener('click', () => {
+        if (opened) return;
+        opened = true;
+        seal.classList.add('melt');
+        if (isVideo) {
+          const videoEl = document.getElementById('chapterMedia');
           videoEl.setAttribute('controls', '');
           videoEl.play().catch(() => { });
-          setTimeout(() => seal.remove(), 450);
-          finishReveal();
-        });
-        return;
-      }
-
-      const frame = document.getElementById('photoFrame');
-      const canvas = document.getElementById('scratchCanvas');
-      const ctx = canvas.getContext('2d');
-      let revealed = false;
-
-      function showMemory() {
-        if (revealed) return;
-        revealed = true;
-        canvas.style.transition = 'opacity .5s ease';
-        canvas.style.opacity = '0';
-        setTimeout(() => canvas.remove(), 500);
+        }
+        setTimeout(() => seal.remove(), 450);
         finishReveal();
-      }
-      document.getElementById('revealSkip').addEventListener('click', showMemory);
-
-      function setupCanvas() {
-        const rect = frame.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-        const grad = ctx.createLinearGradient(0, 0, rect.width, rect.height);
-        grad.addColorStop(0, '#e4c98a');
-        grad.addColorStop(0.5, '#c9a05c');
-        grad.addColorStop(1, '#a8783c');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, rect.width, rect.height);
-        ctx.fillStyle = 'rgba(28,15,20,0.4)';
-        ctx.font = '11px Jost, sans-serif';
-        ctx.textAlign = 'center';
-        for (let y = 20; y < rect.height; y += 34) {
-          ctx.fillText('S C R A T C H', rect.width / 2, y);
-        }
-        ctx.globalCompositeOperation = 'destination-out';
-      }
-      setupCanvas();
-
-      let scratching = false;
-      let lastCheck = 0;
-
-      function scratchAt(x, y) {
-        const rect = canvas.getBoundingClientRect();
-        ctx.beginPath();
-        ctx.arc(x - rect.left, y - rect.top, 26, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      function checkCleared() {
-        const now = Date.now();
-        if (now - lastCheck < 250) return;
-        lastCheck = now;
-        const rect = frame.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        const sampleW = 40, sampleH = 40;
-        const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        let cleared = 0, total = 0;
-        const stepX = Math.max(1, Math.floor(canvas.width / sampleW));
-        const stepY = Math.max(1, Math.floor(canvas.height / sampleH));
-        for (let y = 0; y < canvas.height; y += stepY) {
-          for (let x = 0; x < canvas.width; x += stepX) {
-            const idx = (y * canvas.width + x) * 4 + 3;
-            total++;
-            if (data.data[idx] < 40) cleared++;
-          }
-        }
-        if (total && cleared / total > 0.45) showMemory();
-      }
-
-      function pointerPos(e) {
-        if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        return { x: e.clientX, y: e.clientY };
-      }
-
-      canvas.addEventListener('pointerdown', e => { scratching = true; const p = pointerPos(e); scratchAt(p.x, p.y); });
-      window.addEventListener('pointerup', () => { scratching = false; });
-      canvas.addEventListener('pointermove', e => {
-        if (!scratching) return;
-        const p = pointerPos(e);
-        scratchAt(p.x, p.y);
-        checkCleared();
       });
-      canvas.addEventListener('pointerleave', () => { scratching = false; });
     }
 
     function renderFinale() {
