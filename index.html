@@ -156,6 +156,19 @@
       max-height: calc(100vh - 120px);
     }
 
+    .locket::after {
+      content: '';
+      position: absolute;
+      left: 1px;
+      right: 1px;
+      bottom: 1px;
+      height: 32px;
+      border-radius: 0 0 21px 21px;
+      background: linear-gradient(180deg, transparent, var(--wine-2) 85%);
+      pointer-events: none;
+      z-index: 4;
+    }
+
     .locket-scroll {
       max-height: inherit;
       overflow-y: auto;
@@ -194,8 +207,6 @@
       transform: translateX(-2px);
     }
 
-    .locket::before,
-    .locket::after,
     .locket .corner-tl,
     .locket .corner-tr,
     .locket .corner-bl,
@@ -492,7 +503,7 @@
       position: relative;
       width: 100%;
       aspect-ratio: 4/5;
-      max-height: min(58vh, 460px);
+      max-height: min(38vh, 360px);
       border-radius: 16px;
       overflow: hidden;
       border: 1px solid var(--gold-dim);
