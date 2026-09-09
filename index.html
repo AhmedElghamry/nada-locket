@@ -901,6 +901,10 @@
 
     function renderCover() {
       setBack(undefined);
+      if (state.revealed.length) {
+        state.revealed = [];
+        saveProgress();
+      }
       screenEl.innerHTML = `
     <div class="cover-crest">🕯️</div>
     <div class="eyebrow">Happy Birthday, my love</div>
