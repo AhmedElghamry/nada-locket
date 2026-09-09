@@ -498,12 +498,14 @@
     }
 
     .photo-frame img,
+    .photo-frame video,
     .photo-placeholder {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
+      background: var(--void-2);
     }
 
     .photo-placeholder {
@@ -550,6 +552,53 @@
       letter-spacing: .18em;
       text-transform: uppercase;
       color: rgba(28, 15, 20, 0.55);
+    }
+
+    .scratch-hint-label {
+      text-align: center;
+      margin-top: 10px;
+      font-family: var(--font-ui);
+      font-size: 10px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--ivory-dim);
+    }
+
+    .wax-seal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at 35% 30%, #d9435a 0%, #9c2436 55%, #6b1526 100%);
+      box-shadow:
+        0 10px 26px rgba(0, 0, 0, 0.5),
+        inset 0 2px 4px rgba(255, 255, 255, 0.25),
+        inset 0 -6px 10px rgba(0, 0, 0, 0.4);
+      transition: transform .3s ease, opacity .45s ease;
+    }
+
+    .wax-seal-icon {
+      font-size: 26px;
+      color: rgba(255, 255, 255, 0.85);
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+    }
+
+    .wax-seal:hover {
+      transform: translate(-50%, -50%) scale(1.05);
+    }
+
+    .wax-seal.melt {
+      transform: translate(-50%, -50%) scale(1.3);
+      opacity: 0;
     }
 
     .reveal-skip {
@@ -784,9 +833,9 @@
         type: "choice",
         choices: ["I miss you already", "Have you eaten?", "You looked at me and I forgot what I was saying"],
         correct: 0,
-        memoryTitle: "The Ordinary Days",
-        memoryText: "Replace this with a memory about a small, everyday moment that meant a lot.",
-        image: null
+        memoryTitle: "Graduation Day",
+        memoryText: "This is our first happy memory together. It was the first time in a while I was that happy — I cried a lot. I was so proud of you, as if you were my baby girl I've watched grow all these years, becoming what you want to be and succeeding at it.<br><br>I will keep looking after you and make sure you stay like this: fulfilling your dreams, being what you really are, and doing what you really want. My girl is free to do whatever she dreams of.",
+        video: "graduation.mp4"
       },
       {
         chapter: "Chapter Three",
@@ -1019,17 +1068,26 @@
       setBack(i - 1);
       const isLast = i === STOPS.length - 1;
       const alreadyRevealed = state.revealed.includes(i);
+      const isVideo = !!stop.video;
+
+      const mediaHtml = isVideo
+        ? `<video id="chapterMedia" playsinline preload="metadata"${alreadyRevealed ? ' controls' : ''}></video>`
+        : (stop.image
+          ? `<img src="${stop.image}" alt="${stop.memoryTitle}" />`
+          : `<div class="photo-placeholder"><div class="mono">✦</div><small>Photo goes here</small></div>`);
+
       screenEl.innerHTML = `
     <div class="eyebrow">${stop.chapter} · Unlocked</div>
     <div class="reveal-wrap">
-      <div class="photo-frame" id="photoFrame">
-        ${stop.image
-          ? `<img src="${stop.image}" alt="${stop.memoryTitle}" />`
-          : `<div class="photo-placeholder"><div class="mono">✦</div><small>Photo goes here</small></div>`
-        }
-        ${alreadyRevealed ? '' : `<canvas class="scratch-canvas" id="scratchCanvas"></canvas>`}
+      <div class="photo-frame"${isVideo ? ' style="aspect-ratio:16/9;"' : ''} id="photoFrame">
+        ${mediaHtml}
+        ${alreadyRevealed ? '' : (isVideo
+          ? `<button class="wax-seal" id="waxSeal" aria-label="Break the seal to play the video"><span class="wax-seal-icon">❤</span></button>`
+          : `<canvas class="scratch-canvas" id="scratchCanvas"></canvas>`)}
       </div>
-      ${alreadyRevealed ? '' : `<button class="reveal-skip" id="revealSkip">having trouble scratching? tap to reveal</button>`}
+      ${alreadyRevealed ? '' : (isVideo
+        ? `<div class="scratch-hint-label">break the seal to watch</div>`
+        : `<button class="reveal-skip" id="revealSkip">having trouble scratching? tap to reveal</button>`)}
     </div>
     <div class="memory-title" id="memTitle"${alreadyRevealed ? '' : ' hidden'}>${stop.memoryTitle}</div>
     <p class="memory-text" id="memText"${alreadyRevealed ? '' : ' hidden'}>${stop.memoryText}</p>
@@ -1038,7 +1096,35 @@
 
       document.getElementById('continueBtn').addEventListener('click', () => go(i + 1));
 
+      if (isVideo) {
+        document.getElementById('chapterMedia').src = stop.video;
+      }
+
       if (alreadyRevealed) return;
+
+      function finishReveal() {
+        document.getElementById('memTitle').hidden = false;
+        document.getElementById('memText').hidden = false;
+        document.getElementById('continueBtn').hidden = false;
+        if (!state.revealed.includes(i)) state.revealed.push(i);
+        saveProgress();
+      }
+
+      if (isVideo) {
+        let opened = false;
+        const seal = document.getElementById('waxSeal');
+        const videoEl = document.getElementById('chapterMedia');
+        seal.addEventListener('click', () => {
+          if (opened) return;
+          opened = true;
+          seal.classList.add('melt');
+          videoEl.setAttribute('controls', '');
+          videoEl.play().catch(() => {});
+          setTimeout(() => seal.remove(), 450);
+          finishReveal();
+        });
+        return;
+      }
 
       const frame = document.getElementById('photoFrame');
       const canvas = document.getElementById('scratchCanvas');
@@ -1051,11 +1137,7 @@
         canvas.style.transition = 'opacity .5s ease';
         canvas.style.opacity = '0';
         setTimeout(() => canvas.remove(), 500);
-        document.getElementById('memTitle').hidden = false;
-        document.getElementById('memText').hidden = false;
-        document.getElementById('continueBtn').hidden = false;
-        if (!state.revealed.includes(i)) state.revealed.push(i);
-        saveProgress();
+        finishReveal();
       }
       document.getElementById('revealSkip').addEventListener('click', showMemory);
 
@@ -1142,7 +1224,7 @@
       const gallery = document.getElementById('gallery');
       STOPS.forEach((s, idx) => {
         const b = document.createElement('button');
-        b.innerHTML = s.image ? `<img src="${s.image}" alt="${s.memoryTitle}" />` : `<div class="ph">✦</div>`;
+        b.innerHTML = s.video ? `<div class="ph">🎬</div>` : (s.image ? `<img src="${s.image}" alt="${s.memoryTitle}" />` : `<div class="ph">✦</div>`);
         b.addEventListener('click', () => openMemoryModal(s));
         gallery.appendChild(b);
       });
@@ -1154,8 +1236,11 @@
       const back = document.getElementById('modalBack');
       const card = document.getElementById('modalCard');
       card.innerHTML = `
-    <div class="photo-frame">
-      ${stop.image ? `<img src="${stop.image}" alt="${stop.memoryTitle}" />` : `<div class="photo-placeholder"><div class="mono">✦</div><small>Photo goes here</small></div>`}
+    <div class="photo-frame"${stop.video ? ' style="aspect-ratio:16/9;"' : ''}>
+      ${stop.video
+          ? `<video src="${stop.video}" controls playsinline></video>`
+          : (stop.image ? `<img src="${stop.image}" alt="${stop.memoryTitle}" />` : `<div class="photo-placeholder"><div class="mono">✦</div><small>Photo goes here</small></div>`)
+        }
     </div>
     <div class="memory-title" style="opacity:1;transform:none;">${stop.memoryTitle}</div>
     <p class="memory-text" style="opacity:1;transform:none;">${stop.memoryText}</p>
