@@ -997,7 +997,7 @@
       screenEl.innerHTML = `
     <div class="eyebrow">${stop.chapter} · Unlocked</div>
     <div class="reveal-wrap">
-      <div class="photo-frame"${isVideo ? ' style="aspect-ratio:16/9;"' : ''} id="photoFrame">
+      <div class="photo-frame" id="photoFrame">
         ${mediaHtml}
         ${alreadyRevealed ? '' : `<button class="wax-seal" id="waxSeal" aria-label="Break the seal to reveal"><span class="wax-seal-icon">❤</span></button>`}
       </div>
@@ -1011,7 +1011,14 @@
       document.getElementById('continueBtn').addEventListener('click', () => go(i + 1));
 
       if (isVideo) {
-        document.getElementById('chapterMedia').src = stop.video;
+        const videoEl = document.getElementById('chapterMedia');
+        const frame = document.getElementById('photoFrame');
+        videoEl.addEventListener('loadedmetadata', () => {
+          if (videoEl.videoWidth && videoEl.videoHeight) {
+            frame.style.aspectRatio = videoEl.videoWidth + ' / ' + videoEl.videoHeight;
+          }
+        });
+        videoEl.src = stop.video;
       }
 
       if (alreadyRevealed) return;
