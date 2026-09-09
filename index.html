@@ -145,18 +145,6 @@
       transform: scale(1.25);
     }
 
-    .nav-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin-top: 22px;
-    }
-
-    .nav-row .btn {
-      margin: 0;
-    }
-
     .locket {
       position: relative;
       width: 100%;
@@ -165,15 +153,45 @@
       border-radius: 22px;
       border: 1px solid var(--gold-dim);
       box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(0, 0, 0, 0.2);
-      padding: 34px 28px 30px;
       max-height: calc(100vh - 120px);
+    }
+
+    .locket-scroll {
+      max-height: inherit;
       overflow-y: auto;
       scrollbar-width: none;
       -ms-overflow-style: none;
+      padding: 52px 28px 30px;
     }
 
-    .locket::-webkit-scrollbar {
+    .locket-scroll::-webkit-scrollbar {
       display: none;
+    }
+
+    .back-btn {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.22);
+      border: 1px solid var(--gold-dim);
+      color: var(--gold-soft);
+      font-family: var(--font-ui);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      z-index: 3;
+      transition: background .15s, transform .15s;
+    }
+
+    .back-btn:hover {
+      background: rgba(0, 0, 0, 0.36);
+      transform: translateX(-2px);
     }
 
     .locket::before,
@@ -724,7 +742,10 @@
       <div class="corner-tr"></div>
       <div class="corner-bl"></div>
       <div class="corner-br"></div>
-      <div id="screen"></div>
+      <button class="back-btn" id="backBtn" hidden>‹</button>
+      <div class="locket-scroll">
+        <div id="screen"></div>
+      </div>
     </div>
   </div>
 
@@ -809,7 +830,18 @@
     const STORAGE_KEY = "nadas-locket-progress-v1";
     const screenEl = document.getElementById('screen');
     const progressEl = document.getElementById('progress');
+    const backBtn = document.getElementById('backBtn');
     const lockedTypeAnnounce = new Set();
+
+    function setBack(targetIndex) {
+      if (targetIndex === undefined) {
+        backBtn.hidden = true;
+        backBtn.onclick = null;
+      } else {
+        backBtn.hidden = false;
+        backBtn.onclick = () => go(targetIndex);
+      }
+    }
 
     function loadProgress() {
       const fallback = { index: -1, unlocked: [], revealed: [] };
@@ -868,6 +900,7 @@
     }
 
     function renderCover() {
+      setBack(undefined);
       screenEl.innerHTML = `
     <div class="cover-crest">🕯️</div>
     <div class="eyebrow">Happy Birthday, my love</div>
@@ -881,6 +914,7 @@
     }
 
     function renderRiddle(stop, i) {
+      setBack(i - 1);
       const bodyHtml = ({
         text: () => `
       <div class="text-answer">
@@ -909,10 +943,7 @@
     <div class="eyebrow">${stop.chapter}</div>
     <h2 class="headline">${stop.riddle}</h2>
     ${bodyHtml}
-    <div class="nav-row"><button class="btn ghost small" id="prevBtn">${i > 0 ? '‹ Previous memory' : '‹ Back to the start'}</button></div>
   `;
-
-      document.getElementById('prevBtn').addEventListener('click', () => go(i - 1));
 
       const hintLine = document.getElementById('hintLine');
       let attempts = 0;
@@ -980,6 +1011,7 @@
     }
 
     function renderSolved(stop, i) {
+      setBack(i - 1);
       const isLast = i === STOPS.length - 1;
       const alreadyRevealed = state.revealed.includes(i);
       screenEl.innerHTML = `
@@ -996,13 +1028,9 @@
     </div>
     <div class="memory-title" id="memTitle"${alreadyRevealed ? '' : ' hidden'}>${stop.memoryTitle}</div>
     <p class="memory-text" id="memText"${alreadyRevealed ? '' : ' hidden'}>${stop.memoryText}</p>
-    <div class="nav-row" id="navRow"${alreadyRevealed ? '' : ' hidden'}>
-      <button class="btn ghost" id="prevBtn">${i > 0 ? '‹ Previous' : '‹ Back to the start'}</button>
-      <button class="btn continue-btn" id="continueBtn">${isLast ? 'Read the last page' : 'Continue'}</button>
-    </div>
+    <button class="btn continue-btn" id="continueBtn"${alreadyRevealed ? '' : ' hidden'}>${isLast ? 'Read the last page' : 'Continue'}</button>
   `;
 
-      document.getElementById('prevBtn').addEventListener('click', () => go(i - 1));
       document.getElementById('continueBtn').addEventListener('click', () => go(i + 1));
 
       if (alreadyRevealed) return;
@@ -1020,7 +1048,7 @@
         setTimeout(() => canvas.remove(), 500);
         document.getElementById('memTitle').hidden = false;
         document.getElementById('memText').hidden = false;
-        document.getElementById('navRow').hidden = false;
+        document.getElementById('continueBtn').hidden = false;
         if (!state.revealed.includes(i)) state.revealed.push(i);
         saveProgress();
       }
@@ -1097,16 +1125,14 @@
     }
 
     function renderFinale() {
+      setBack(STOPS.length - 1);
       screenEl.innerHTML = `
     <div class="cover-crest">💛</div>
     <h1 class="headline" style="font-size:clamp(24px,7vw,32px);">${FINALE.title}</h1>
     <div class="divider"></div>
     <p class="sub" style="font-size:17px; font-style:italic; color:var(--ivory);">${FINALE.message}</p>
     <div class="gallery" id="gallery"></div>
-    <div class="nav-row" style="margin-top:22px;">
-      <button class="btn ghost small" id="prevBtn">‹ Previous</button>
-      <button class="btn ghost small" id="replayBtn">Walk through it again</button>
-    </div>
+    <button class="btn ghost small" id="replayBtn" style="margin-top:22px;">Walk through it again</button>
   `;
       const gallery = document.getElementById('gallery');
       STOPS.forEach((s, idx) => {
@@ -1115,7 +1141,6 @@
         b.addEventListener('click', () => openMemoryModal(s));
         gallery.appendChild(b);
       });
-      document.getElementById('prevBtn').addEventListener('click', () => go(STOPS.length - 1));
       document.getElementById('replayBtn').addEventListener('click', () => go(0));
       launchPetals();
     }
